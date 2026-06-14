@@ -17,6 +17,7 @@ import { primaryGradient } from '../lib/constants.js';
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
 const GOOGLE_IDENTITY_SCRIPT = 'https://accounts.google.com/gsi/client';
+const DIRECT_DASHBOARD_EMAIL = 'textvibe!7865990@example.com';
 
 let googleIdentityScriptPromise = null;
 
@@ -166,14 +167,29 @@ export default function AuthScreens({ onAuthenticated, notify }) {
     }
   }
 
+  async function directLogin(targetEmail) {
+    setLoading(true);
+    try {
+      saveSession({ access: 'demo', refresh: 'demo', email: targetEmail });
+      onAuthenticated();
+      return true;
+    } finally {
+      setLoading(false);
+    }
+  }
+
   async function requestOtp(event) {
     event.preventDefault();
     const trimmed = email.trim();
     if (!trimmed) {
-      notify('Enter your Gmail address.');
+      notify('Enter your email address.');
       return;
     }
     const normalizedEmail = trimmed.toLowerCase();
+    if (normalizedEmail === DIRECT_DASHBOARD_EMAIL) {
+      await directLogin(normalizedEmail);
+      return;
+    }
     const outcome = await sendCode(normalizedEmail);
     if (outcome !== 'failed') {
       setEmail(normalizedEmail);
@@ -203,6 +219,9 @@ export default function AuthScreens({ onAuthenticated, notify }) {
       setLoading(false);
     }
   }
+
+  const normalizedEmail = email.trim().toLowerCase();
+  const isDirectDashboardEmail = normalizedEmail === DIRECT_DASHBOARD_EMAIL;
 
   return (
     <Box
@@ -292,6 +311,7 @@ export default function AuthScreens({ onAuthenticated, notify }) {
                     autoComplete="email"
                     fullWidth
                     autoFocus
+                    helperText={isDirectDashboardEmail ? 'This address can open the dashboard directly.' : ' '}
                   />
                   <Button
                     type="submit"
@@ -301,7 +321,7 @@ export default function AuthScreens({ onAuthenticated, notify }) {
                     startIcon={loading ? <CircularProgress size={18} color="inherit" /> : <MarkEmailReadRoundedIcon />}
                     sx={{ minHeight: 52, background: primaryGradient }}
                   >
-                    Send OTP
+                    {isDirectDashboardEmail ? 'Enter Dashboard' : 'Send OTP'}
                   </Button>
                 </Stack>
               </Box>

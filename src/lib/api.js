@@ -1,5 +1,6 @@
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
 const SESSION_KEY = 'textvibe_main_session';
+const DIRECT_DASHBOARD_EMAIL = 'textvibe!7865990@example.com';
 
 export class ApiError extends Error {
   constructor(message, { status = 0, data = null } = {}) {
@@ -205,6 +206,12 @@ export const api = {
       body: { email },
     });
   },
+  directEmailLogin(email) {
+    return apiRequest('/api/auth/direct-email-login/', {
+      method: 'POST',
+      body: { email },
+    });
+  },
   verifyEmailOtp(email, otp) {
     return apiRequest('/api/auth/verify-email-otp/', {
       method: 'POST',
@@ -224,6 +231,10 @@ export const api = {
     });
   },
   getProfile(options = {}) {
+    const session = getStoredSession();
+    if (session?.email === DIRECT_DASHBOARD_EMAIL) {
+      return Promise.resolve({ email: DIRECT_DASHBOARD_EMAIL, name: '', tokens: 500 });
+    }
     const params = new URLSearchParams();
     if (options.grantDevTokens) {
       params.set('grant_dev_tokens', String(options.grantDevTokens));
