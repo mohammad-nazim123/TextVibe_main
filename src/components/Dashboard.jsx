@@ -54,12 +54,13 @@ export default function Dashboard({ profile, setProfile, onLoggedOut, notify, na
   return (
     <Box
       sx={{
-        height: '100dvh',
+        minHeight: '100dvh',
+        height: { md: '100dvh' },
         background:
           'radial-gradient(circle at 14% 12%, rgba(255,107,157,.14), transparent 30%), radial-gradient(circle at 86% 20%, rgba(139,92,246,.12), transparent 32%), #FFF5F8',
         display: 'flex',
         flexDirection: 'column',
-        overflow: 'hidden',
+        overflow: { xs: 'visible', md: 'hidden' },
       }}
     >
       <AppBar
@@ -137,8 +138,8 @@ export default function Dashboard({ profile, setProfile, onLoggedOut, notify, na
 
       <Box
         sx={{
-          flex: 1,
-          minHeight: 0,
+          flex: { md: 1 },
+          minHeight: { md: 0 },
           width: '100%',
           display: 'flex',
         }}
@@ -158,9 +159,11 @@ export default function Dashboard({ profile, setProfile, onLoggedOut, notify, na
         <Box
           component="main"
           sx={{
-            flex: 1,
+            flex: { md: 1 },
+            width: '100%',
             minWidth: 0,
-            overflowY: 'auto',
+            minHeight: { md: 0 },
+            overflowY: { xs: 'visible', md: 'auto' },
             px: { xs: 1, sm: 2, md: 2.5, lg: 3 },
             py: { xs: 1.25, sm: 2, md: 2.5 },
             // Keep content clear of the fixed Send bar on phones/tablets.
