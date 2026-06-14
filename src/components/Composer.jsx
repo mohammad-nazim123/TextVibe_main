@@ -641,7 +641,13 @@ function EmojiDialog({ open, onClose, onInsert, notify }) {
               key={label}
               size="small"
               variant={tab === i ? 'contained' : 'outlined'}
-              onClick={() => setTab(i)}
+              onClick={() => {
+                if (i === 2) {
+                  notify('Coming soon');
+                } else {
+                  setTab(i);
+                }
+              }}
               sx={{ minWidth: 0, flex: 1, fontSize: 12, fontWeight: 800 }}
             >
               {label}
@@ -1036,6 +1042,26 @@ export default function Composer({ state, setState, profile, setProfile, notify 
     [state.durationSeconds],
   );
 
+  function filterKeyboardEmojis(newValue, prevValue) {
+    let prefixLen = 0;
+    const minLen = Math.min(prevValue.length, newValue.length);
+    while (prefixLen < minLen && prevValue[prefixLen] === newValue[prefixLen]) {
+      prefixLen++;
+    }
+    let suffixLen = 0;
+    while (
+      suffixLen < prevValue.length - prefixLen &&
+      suffixLen < newValue.length - prefixLen &&
+      prevValue[prevValue.length - 1 - suffixLen] === newValue[newValue.length - 1 - suffixLen]
+    ) {
+      suffixLen++;
+    }
+    const insertedEnd = newValue.length - suffixLen;
+    const inserted = newValue.slice(prefixLen, insertedEnd);
+    const filtered = inserted.replace(/\p{Extended_Pictographic}/gu, '');
+    return newValue.slice(0, prefixLen) + filtered + newValue.slice(insertedEnd);
+  }
+
   function updateText(value) {
     const next = value.slice(0, MAX_CHARS);
     setState((s) => ({ ...s, text: next }));
@@ -1220,7 +1246,7 @@ export default function Composer({ state, setState, profile, setProfile, notify 
               <TextField
                 inputRef={inputRef}
                 value={state.text}
-                onChange={(e) => updateText(e.target.value)}
+                onChange={(e) => updateText(filterKeyboardEmojis(e.target.value, state.text))}
                 placeholder="Share your thoughts, feelings, wishes or stories..."
                 multiline
                 minRows={1}

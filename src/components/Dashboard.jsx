@@ -15,7 +15,7 @@ import Composer from './Composer.jsx';
 import EditProfileDialog from './EditProfileDialog.jsx';
 import HistoryDialog from './HistoryDialog.jsx';
 
-export default function Dashboard({ profile, setProfile, onLoggedOut, notify }) {
+export default function Dashboard({ profile, setProfile, onLoggedOut, notify, navigate }) {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
@@ -35,6 +35,11 @@ export default function Dashboard({ profile, setProfile, onLoggedOut, notify }) 
   function openHistory() {
     setDrawerOpen(false);
     setHistoryOpen(true);
+  }
+
+  function openSupport() {
+    setDrawerOpen(false);
+    navigate('/support');
   }
 
   function logout() {
@@ -145,6 +150,7 @@ export default function Dashboard({ profile, setProfile, onLoggedOut, notify }) 
           onEditProfile={openEditProfile}
           onBuyTokens={openBuyTokens}
           onHistory={openHistory}
+          onSupport={openSupport}
           onLogout={logout}
           sx={{ display: { xs: 'none', md: 'block' } }}
         />
@@ -187,6 +193,7 @@ export default function Dashboard({ profile, setProfile, onLoggedOut, notify }) 
         onEditProfile={openEditProfile}
         onBuyTokens={openBuyTokens}
         onHistory={openHistory}
+        onSupport={openSupport}
         onLogout={logout}
         sx={{ display: { xs: 'block', md: 'none' } }}
       />

@@ -248,6 +248,16 @@ export const api = {
       auth: true,
     });
   },
+  getSupportMessages() {
+    return apiRequest('/api/auth/support/', { auth: true });
+  },
+  createSupportMessage(message) {
+    return apiRequest('/api/auth/support/', {
+      method: 'POST',
+      body: { message },
+      auth: true,
+    });
+  },
   getBillboard(options = {}) {
     const params = new URLSearchParams();
     if (options.user) params.set('user', String(options.user));

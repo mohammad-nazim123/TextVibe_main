@@ -6,15 +6,33 @@ import Snackbar from '@mui/material/Snackbar';
 
 import AuthScreens from './components/AuthScreens.jsx';
 import Dashboard from './components/Dashboard.jsx';
+import SupportPage from './components/SupportPage.jsx';
 import { api, clearAllStorage, getStoredSession, refreshAccessToken, setAuthLostHandler } from './lib/api.js';
 
 export default function App() {
   const [sessionReady, setSessionReady] = useState(false);
   const [profile, setProfile] = useState(null);
   const [snack, setSnack] = useState('');
+  const [path, setPath] = useState(() => window.location.pathname);
 
   const notify = useCallback((message) => {
     setSnack(String(message || 'Something happened.'));
+  }, []);
+
+  // Lightweight client-side routing: keep `path` in sync with the address bar
+  // (Back/Forward) and expose `navigate` for in-app links — real URLs, no
+  // page reload, no router dependency.
+  useEffect(() => {
+    const onPop = () => setPath(window.location.pathname);
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
+  }, []);
+
+  const navigate = useCallback((to) => {
+    if (to !== window.location.pathname) {
+      window.history.pushState({}, '', to);
+    }
+    setPath(to);
   }, []);
 
   const logoutLocal = useCallback(() => {
@@ -103,7 +121,17 @@ export default function App() {
   return (
     <>
       {profile ? (
-        <Dashboard profile={profile} setProfile={setProfile} onLoggedOut={logoutLocal} notify={notify} />
+        path === '/support' ? (
+          <SupportPage profile={profile} notify={notify} onBack={() => navigate('/')} />
+        ) : (
+          <Dashboard
+            profile={profile}
+            setProfile={setProfile}
+            onLoggedOut={logoutLocal}
+            notify={notify}
+            navigate={navigate}
+          />
+        )
       ) : (
         <AuthScreens onAuthenticated={loadProfile} notify={notify} />
       )}

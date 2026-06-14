@@ -13,6 +13,7 @@ import AddCircleOutlineRoundedIcon from '@mui/icons-material/AddCircleOutlineRou
 import EditRoundedIcon from '@mui/icons-material/EditRounded';
 import HistoryRoundedIcon from '@mui/icons-material/HistoryRounded';
 import LogoutRoundedIcon from '@mui/icons-material/LogoutRounded';
+import SupportAgentRoundedIcon from '@mui/icons-material/SupportAgentRounded';
 import TollRoundedIcon from '@mui/icons-material/TollRounded';
 
 import { primaryGradient } from '../lib/constants.js';
@@ -25,6 +26,7 @@ export default function AppDrawer({
   onEditProfile,
   onBuyTokens,
   onHistory,
+  onSupport,
   onLogout,
   sx,
 }) {
@@ -166,6 +168,16 @@ export default function AppDrawer({
 
         <Divider />
         <Box sx={{ p: { xs: 1.5, sm: 2 }, flex: '0 0 auto', pb: 'calc(16px + env(safe-area-inset-bottom))' }}>
+          <Button
+            fullWidth
+            size="large"
+            variant="outlined"
+            startIcon={<SupportAgentRoundedIcon />}
+            onClick={onSupport}
+            sx={{ height: 48, mb: 1.25, borderColor: '#E9D5FF', color: '#8B5CF6', '&:hover': { borderColor: '#8B5CF6', bgcolor: '#FAF5FF' } }}
+          >
+            Support
+          </Button>
           <Button
             fullWidth
             size="large"
