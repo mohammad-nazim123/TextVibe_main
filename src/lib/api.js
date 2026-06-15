@@ -200,6 +200,18 @@ export const api = {
   health() {
     return apiRequest('/');
   },
+  login(username, password) {
+    return apiRequest('/api/auth/username-login/', {
+      method: 'POST',
+      body: { username, password },
+    });
+  },
+  register(username, password) {
+    return apiRequest('/api/auth/register/', {
+      method: 'POST',
+      body: { username, password },
+    });
+  },
   requestEmailOtp(email) {
     return apiRequest('/api/auth/google-auth/', {
       method: 'POST',
