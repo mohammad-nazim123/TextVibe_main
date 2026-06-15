@@ -70,8 +70,8 @@ export const fontFamilies = [
   'Petit Formal Script',
 ];
 
-export const durations = [3, 5, 10, 30];
-export const durationTokenCosts = { 3: 5, 5: 7, 10: 12, 30: 30 };
+export const durations = [10, 20, 30];
+export const durationTokenCosts = { 10: 5, 20: 7, 30: 10 };
 
 export function composerTokenCost({ durationSeconds, hasImage = false }) {
   const base = durationTokenCosts[durationSeconds] || 7;
@@ -183,7 +183,7 @@ export const defaultComposerState = {
   isBold: false,
   isItalic: false,
   border: null,
-  durationSeconds: 5,
+  durationSeconds: 10,
 };
 
 export function hexToRgb(hex) {

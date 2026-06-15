@@ -5,44 +5,52 @@ import CircularProgress from '@mui/material/CircularProgress';
 import Container from '@mui/material/Container';
 import Paper from '@mui/material/Paper';
 import Stack from '@mui/material/Stack';
-import Tab from '@mui/material/Tab';
-import Tabs from '@mui/material/Tabs';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
+import { GoogleLogin } from '@react-oauth/google';
 
 import dashboardLogo from '../assets/TextVibe_dasboard_logo.png';
 import { api, saveSession } from '../lib/api.js';
 import { primaryGradient } from '../lib/constants.js';
 
 export default function AuthScreens({ onAuthenticated, notify }) {
-  const [tab, setTab] = useState(0); // 0 = Login, 1 = Sign Up
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
+  const [step, setStep] = useState('google'); // 'google' | 'otp'
+  const [email, setEmail] = useState('');
+  const [otp, setOtp] = useState('');
   const [loading, setLoading] = useState(false);
 
-  function resetFields() {
-    setUsername('');
-    setPassword('');
-    setConfirmPassword('');
-  }
-
-  function handleTabChange(_, newValue) {
-    setTab(newValue);
-    resetFields();
-  }
-
-  async function handleLogin(event) {
-    event.preventDefault();
-    if (!username.trim()) { notify('Enter your username.'); return; }
-    if (!password) { notify('Enter your password.'); return; }
+  async function handleGooglePicked(pickedEmail) {
+    setEmail(pickedEmail);
     setLoading(true);
     try {
-      const data = await api.login(username.trim(), password);
+      await api.requestEmailOtp(pickedEmail);
+      setStep('otp');
+    } catch (err) {
+      notify(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  function handleGoogleSuccess(credentialResponse) {
+    try {
+      const payload = JSON.parse(atob(credentialResponse.credential.split('.')[1]));
+      handleGooglePicked(payload.email);
+    } catch {
+      notify('Could not read the selected account. Please try again.');
+    }
+  }
+
+  async function handleVerifyOtp(event) {
+    event.preventDefault();
+    if (!otp.trim()) { notify('Enter the verification code.'); return; }
+    setLoading(true);
+    try {
+      const data = await api.verifyEmailOtp(email.trim(), otp.trim());
       saveSession({
         access: data.access,
         refresh: data.refresh,
-        email: data.user?.email || '',
+        email: data.user?.email || email.trim(),
       });
       onAuthenticated();
     } catch (err) {
@@ -51,29 +59,6 @@ export default function AuthScreens({ onAuthenticated, notify }) {
       setLoading(false);
     }
   }
-
-  async function handleSignUp(event) {
-    event.preventDefault();
-    if (!username.trim()) { notify('Enter a username.'); return; }
-    if (!password) { notify('Enter a password.'); return; }
-    if (password !== confirmPassword) { notify('Passwords do not match.'); return; }
-    setLoading(true);
-    try {
-      const data = await api.register(username.trim(), password);
-      saveSession({
-        access: data.access,
-        refresh: data.refresh,
-        email: data.user?.email || '',
-      });
-      onAuthenticated();
-    } catch (err) {
-      notify(err.message);
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  const isLogin = tab === 0;
 
   return (
     <Box
@@ -115,89 +100,65 @@ export default function AuthScreens({ onAuthenticated, notify }) {
                 <Box component="img" src={dashboardLogo} alt="TextVibe" sx={{ width: 44, height: 44, objectFit: 'contain' }} />
               </Box>
               <Typography variant="h4" sx={{ fontWeight: 900, letterSpacing: 0, fontSize: { xs: 28, sm: 34 }, lineHeight: 1.12 }}>
-                Welcome to TextVibe
+                {step === 'google' ? 'Welcome to TextVibe' : 'Check your Gmail'}
               </Typography>
               <Typography color="text.secondary" sx={{ lineHeight: 1.55 }}>
-                {isLogin ? 'Sign in with your username and password.' : 'Create a new account to get started.'}
+                {step === 'google'
+                  ? 'Sign in with your Google account. We\'ll send a verification code to your Gmail.'
+                  : `Enter the 6-digit code sent to ${email}`}
               </Typography>
             </Stack>
 
-            <Tabs
-              value={tab}
-              onChange={handleTabChange}
-              variant="fullWidth"
-              sx={{
-                '& .MuiTabs-indicator': { background: primaryGradient },
-                '& .Mui-selected': { fontWeight: 700 },
-              }}
-            >
-              <Tab label="Login" disabled={loading} />
-              <Tab label="Sign Up" disabled={loading} />
-            </Tabs>
-
-            {isLogin ? (
-              <Box component="form" onSubmit={handleLogin}>
-                <Stack spacing={2}>
-                  <TextField
-                    label="Username"
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
-                    autoComplete="username"
-                    fullWidth
-                    autoFocus
-                    disabled={loading}
-                  />
-                  <TextField
-                    label="Password"
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    autoComplete="current-password"
-                    fullWidth
-                    disabled={loading}
-                  />
-                  <Button
-                    type="submit"
-                    size="large"
-                    variant="contained"
-                    disabled={loading}
-                    startIcon={loading ? <CircularProgress size={18} color="inherit" /> : null}
-                    sx={{ minHeight: 52, background: primaryGradient }}
-                  >
-                    Login
-                  </Button>
-                </Stack>
-              </Box>
+            {step === 'google' ? (
+              <Stack spacing={2}>
+                <GoogleLogin
+                  onSuccess={handleGoogleSuccess}
+                  onError={() => notify('Google Sign-In failed. Please try again.')}
+                  width="368"
+                  size="large"
+                  text="continue_with"
+                  shape="rectangular"
+                />
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Box sx={{ flex: 1, height: '1px', bgcolor: 'divider' }} />
+                  <Typography variant="caption" color="text.secondary">or</Typography>
+                  <Box sx={{ flex: 1, height: '1px', bgcolor: 'divider' }} />
+                </Box>
+                <Box component="form" onSubmit={(e) => { e.preventDefault(); handleGooglePicked(email.trim()); }}>
+                  <Stack spacing={1.5}>
+                    <TextField
+                      label="Gmail address"
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      autoComplete="email"
+                      fullWidth
+                      disabled={loading}
+                      placeholder="you@gmail.com"
+                    />
+                    <Button
+                      type="submit"
+                      size="large"
+                      variant="contained"
+                      disabled={loading || !email.trim()}
+                      startIcon={loading ? <CircularProgress size={18} color="inherit" /> : null}
+                      sx={{ minHeight: 48, background: primaryGradient }}
+                    >
+                      Send OTP
+                    </Button>
+                  </Stack>
+                </Box>
+              </Stack>
             ) : (
-              <Box component="form" onSubmit={handleSignUp}>
+              <Box component="form" onSubmit={handleVerifyOtp}>
                 <Stack spacing={2}>
                   <TextField
-                    label="Username"
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
-                    autoComplete="username"
+                    label="6-digit code"
+                    value={otp}
+                    onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                    inputProps={{ inputMode: 'numeric', maxLength: 6 }}
                     fullWidth
                     autoFocus
-                    disabled={loading}
-                    helperText="Letters, numbers, and underscores only."
-                  />
-                  <TextField
-                    label="Password"
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    autoComplete="new-password"
-                    fullWidth
-                    disabled={loading}
-                    helperText="At least 6 characters."
-                  />
-                  <TextField
-                    label="Confirm Password"
-                    type="password"
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    autoComplete="new-password"
-                    fullWidth
                     disabled={loading}
                   />
                   <Button
@@ -208,7 +169,16 @@ export default function AuthScreens({ onAuthenticated, notify }) {
                     startIcon={loading ? <CircularProgress size={18} color="inherit" /> : null}
                     sx={{ minHeight: 52, background: primaryGradient }}
                   >
-                    Sign Up
+                    Verify &amp; Continue
+                  </Button>
+                  <Button
+                    size="small"
+                    variant="text"
+                    disabled={loading}
+                    onClick={() => { setStep('google'); setOtp(''); setEmail(''); }}
+                    sx={{ color: 'text.secondary' }}
+                  >
+                    Wrong account? Go back
                   </Button>
                 </Stack>
               </Box>

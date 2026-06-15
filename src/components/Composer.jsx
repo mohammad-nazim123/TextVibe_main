@@ -1,4 +1,4 @@
-import { cloneElement, useMemo, useRef, useState } from 'react';
+import { cloneElement, useEffect, useMemo, useRef, useState } from 'react';
 import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
@@ -1034,12 +1034,23 @@ export default function Composer({ state, setState, profile, setProfile, notify 
   const [panel, setPanel] = useState(null);
   const [sending, setSending] = useState(false);
   const [moderationError, setModerationError] = useState(null);
+  const [photoFile, setPhotoFile] = useState(null);
   const inputRef = useRef(null);
   const lastSentRef = useRef(null);
+  const photoInputRef = useRef(null);
+
+  const photoPreviewUrl = useMemo(
+    () => (photoFile ? URL.createObjectURL(photoFile) : null),
+    [photoFile],
+  );
+
+  useEffect(() => {
+    return () => { if (photoPreviewUrl) URL.revokeObjectURL(photoPreviewUrl); };
+  }, [photoPreviewUrl]);
 
   const cost = useMemo(
-    () => composerTokenCost({ durationSeconds: state.durationSeconds, hasImage: false }),
-    [state.durationSeconds],
+    () => composerTokenCost({ durationSeconds: state.durationSeconds, hasImage: Boolean(photoFile) }),
+    [state.durationSeconds, photoFile],
   );
 
   function filterKeyboardEmojis(newValue, prevValue) {
@@ -1096,8 +1107,8 @@ export default function Composer({ state, setState, profile, setProfile, notify 
     }
 
     const text = state.text.trim();
-    if (!text) {
-      notify('Write something to send.');
+    if (!text && !photoFile) {
+      notify('Write something or add a photo to send.');
       return;
     }
     const result = moderateText(state.text);
@@ -1133,16 +1144,20 @@ export default function Composer({ state, setState, profile, setProfile, notify 
         form.append('background_color', state.backgroundColor);
       }
 
-      const canvasBlob = await captureComposerCanvas(state);
-      if (canvasBlob) {
-        form.append('canvas_image', canvasBlob, 'canvas.png');
-      }
+      if (!photoFile) {
+        const canvasBlob = await captureComposerCanvas(state);
+        if (canvasBlob) {
+          form.append('canvas_image', canvasBlob, 'canvas.png');
+        }
 
-      const textBlob = await captureTextCanvas(state);
-      if (textBlob) {
-        form.append('text_image', textBlob, 'text.png');
-        form.append('text_canvas_width', String(FIELD_W));
-        form.append('text_canvas_height', String(FIELD_H));
+        const textBlob = await captureTextCanvas(state);
+        if (textBlob) {
+          form.append('text_image', textBlob, 'text.png');
+          form.append('text_canvas_width', String(FIELD_W));
+          form.append('text_canvas_height', String(FIELD_H));
+        }
+      } else {
+        form.append('image', photoFile, photoFile.name);
       }
 
       const data = await api.createPost(form);
@@ -1151,6 +1166,7 @@ export default function Composer({ state, setState, profile, setProfile, notify 
       }
       lastSentRef.current = Date.now();
       setState((s) => ({ ...s, text: '' }));
+      setPhotoFile(null);
       setModerationError(null);
       notify('Sent!');
     } catch (err) {
@@ -1189,7 +1205,7 @@ export default function Composer({ state, setState, profile, setProfile, notify 
         <Box
           sx={{
             bgcolor: '#FFFFFF',
-            borderRadius: 3,
+            borderRadius: 1,
             border: '1px solid #F3E8FF',
             boxShadow: '0 16px 40px rgba(255,107,157,.10)',
             overflow: 'hidden',
@@ -1212,10 +1228,17 @@ export default function Composer({ state, setState, profile, setProfile, notify 
               {cost} tokens
             </Typography>
             <Tooltip title="Add photo">
-              <IconButton size="small" onClick={() => notify('Photo attachment is coming soon.')} sx={{ color: '#8B5CF6', flex: '0 0 auto' }}>
+              <IconButton size="small" onClick={() => photoInputRef.current?.click()} sx={{ color: '#8B5CF6', flex: '0 0 auto' }}>
                 <AddPhotoAlternateOutlinedIcon />
               </IconButton>
             </Tooltip>
+            <input
+              ref={photoInputRef}
+              type="file"
+              accept="image/*"
+              style={{ display: 'none' }}
+              onChange={(e) => { setPhotoFile(e.target.files?.[0] || null); e.target.value = ''; }}
+            />
             <Tooltip title="Add emoji">
               <IconButton size="small" onClick={() => setPanel('emoji')} sx={{ color: '#8B5CF6', flex: '0 0 auto' }}>
                 <SentimentSatisfiedAltOutlinedIcon />
@@ -1236,64 +1259,95 @@ export default function Composer({ state, setState, profile, setProfile, notify 
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                // Author the field in the 420 design space (cqw/cqh below) so
-                // the live text wraps, scales, and centres exactly like the
-                // captured image and the billboard.
                 containerType: 'size',
-                ...composerSurfaceSx(state),
+                ...(photoPreviewUrl ? { background: '#000' } : composerSurfaceSx(state)),
               }}
             >
-              <TextField
-                inputRef={inputRef}
-                value={state.text}
-                onChange={(e) => updateText(filterKeyboardEmojis(e.target.value, state.text))}
-                placeholder="Share your thoughts, feelings, wishes or stories..."
-                multiline
-                minRows={1}
-                variant="standard"
-                fullWidth
-                InputProps={{ disableUnderline: true }}
-                sx={{
-                  width: '100%',
-                  '& .MuiInputBase-root': {
-                    p: 0,
-                    width: '100%',
-                    // Cap at the field height so long text scrolls inside the
-                    // field instead of overflowing the frame; short text stays
-                    // vertically centred by the parent flex.
-                    maxHeight: '100cqh',
-                    overflowY: 'auto',
-                  },
-                  '& .MuiInputBase-input': {
-                    boxSizing: 'border-box',
-                    textAlign: 'center',
-                    color: state.textColor,
-                    fontSize: `calc(${state.fontSize} / ${FIELD_W} * 100cqw)`,
-                    fontFamily: `"${state.fontFamily}", sans-serif`,
-                    fontWeight: state.isBold ? 700 : 400,
-                    fontStyle: state.isItalic ? 'italic' : 'normal',
-                    lineHeight: 1.28,
-                    padding: `${padPct(textInsets.top)} ${padPct(textInsets.right)} ${padPct(textInsets.bottom)} ${padPct(textInsets.left)}`,
-                    ...(legendaryInputSx || premiumInputSx || {}),
-                  },
-                  '& textarea::placeholder': {
-                    color: state.textColor,
-                    opacity: 0.45,
-                  },
-                }}
-              />
-              {frameUrl ? (
-                <Box
-                  sx={{
-                    position: 'absolute',
-                    inset: 0,
-                    backgroundImage: `url(${frameUrl})`,
-                    backgroundSize: '100% 100%',
-                    pointerEvents: 'none',
-                    zIndex: 1,
-                  }}
-                />
-              ) : null}
+              {photoPreviewUrl ? (
+                <>
+                  <Box
+                    component="img"
+                    src={photoPreviewUrl}
+                    alt="Selected photo"
+                    sx={{
+                      width: '100%',
+                      height: '100%',
+                      objectFit: 'contain',
+                      objectPosition: 'center',
+                      display: 'block',
+                    }}
+                  />
+                  <IconButton
+                    size="small"
+                    onClick={() => setPhotoFile(null)}
+                    sx={{
+                      position: 'absolute',
+                      top: 8,
+                      right: 8,
+                      zIndex: 2,
+                      bgcolor: 'rgba(0,0,0,0.55)',
+                      color: '#fff',
+                      '&:hover': { bgcolor: 'rgba(0,0,0,0.75)' },
+                    }}
+                  >
+                    <CloseRoundedIcon fontSize="small" />
+                  </IconButton>
+                </>
+              ) : (
+                <>
+                  <TextField
+                    inputRef={inputRef}
+                    value={state.text}
+                    onChange={(e) => updateText(filterKeyboardEmojis(e.target.value, state.text))}
+                    placeholder="Share your thoughts, feelings, wishes or stories..."
+                    multiline
+                    minRows={1}
+                    variant="standard"
+                    fullWidth
+                    InputProps={{ disableUnderline: true }}
+                    sx={{
+                      width: '100%',
+                      '& .MuiInputBase-root': {
+                        p: 0,
+                        width: '100%',
+                        // Cap at the field height so long text scrolls inside the
+                        // field instead of overflowing the frame; short text stays
+                        // vertically centred by the parent flex.
+                        maxHeight: '100cqh',
+                        overflowY: 'auto',
+                      },
+                      '& .MuiInputBase-input': {
+                        boxSizing: 'border-box',
+                        textAlign: 'center',
+                        color: state.textColor,
+                        fontSize: `calc(${state.fontSize} / ${FIELD_W} * 100cqw)`,
+                        fontFamily: `"${state.fontFamily}", sans-serif`,
+                        fontWeight: state.isBold ? 700 : 400,
+                        fontStyle: state.isItalic ? 'italic' : 'normal',
+                        lineHeight: 1.28,
+                        padding: `${padPct(textInsets.top)} ${padPct(textInsets.right)} ${padPct(textInsets.bottom)} ${padPct(textInsets.left)}`,
+                        ...(legendaryInputSx || premiumInputSx || {}),
+                      },
+                      '& textarea::placeholder': {
+                        color: state.textColor,
+                        opacity: 0.45,
+                      },
+                    }}
+                  />
+                  {frameUrl ? (
+                    <Box
+                      sx={{
+                        position: 'absolute',
+                        inset: 0,
+                        backgroundImage: `url(${frameUrl})`,
+                        backgroundSize: '100% 100%',
+                        pointerEvents: 'none',
+                        zIndex: 1,
+                      }}
+                    />
+                  ) : null}
+                </>
+              )}
             </Box>
           </Box>
         </Box>
@@ -1308,7 +1362,7 @@ export default function Composer({ state, setState, profile, setProfile, notify 
             maxHeight: { md: 'none' },
             p: { xs: 1.25, sm: 1.6 },
             bgcolor: '#FFFFFF',
-            borderRadius: 3,
+            borderRadius: 1,
             border: '1px solid #F3E8FF',
             overflowY: { xs: 'visible', md: 'auto' },
             overflowX: 'hidden',

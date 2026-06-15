@@ -3,6 +3,7 @@ import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
 import CircularProgress from '@mui/material/CircularProgress';
 import Snackbar from '@mui/material/Snackbar';
+import { GoogleOAuthProvider } from '@react-oauth/google';
 
 import AuthScreens from './components/AuthScreens.jsx';
 import Dashboard from './components/Dashboard.jsx';
@@ -119,7 +120,7 @@ export default function App() {
   }
 
   return (
-    <>
+    <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID}>
       {profile ? (
         path === '/support' ? (
           <SupportPage profile={profile} notify={notify} onBack={() => navigate('/')} />
@@ -145,6 +146,6 @@ export default function App() {
           {snack}
         </Alert>
       </Snackbar>
-    </>
+    </GoogleOAuthProvider>
   );
 }
