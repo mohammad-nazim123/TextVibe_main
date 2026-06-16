@@ -29,7 +29,7 @@ export default function Dashboard({ profile, setProfile, onLoggedOut, notify, na
 
   function openBuyTokens() {
     setDrawerOpen(false);
-    notify('Buying tokens is coming soon.');
+    setBuyOpen(true);
   }
 
   function openHistory() {

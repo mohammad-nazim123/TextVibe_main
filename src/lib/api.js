@@ -321,6 +321,9 @@ export const api = {
   getPaymentHistory() {
     return apiRequest('/api/payments/history/', { auth: true });
   },
+  getSubscriptionPlans() {
+    return apiRequest('/api/payments/subscriptions/plans/');
+  },
 };
 
 export { API_BASE };

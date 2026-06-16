@@ -63,6 +63,14 @@ const appLavender = '#EDE9FE';
 const appBorder = '#F3E8FF';
 const appText = '#1A1A2E';
 const appMuted = '#6B7280';
+const BUY_PREMIUM_MESSAGE = 'Buy premium or legendary subscription to unlock this.';
+const BUY_LEGENDARY_MESSAGE = 'Buy legendary subscription to unlock this.';
+function isPremiumActive(profile) {
+  return profile?.subscription_tier === 'premium' || profile?.subscription_tier === 'legendary';
+}
+function isLegendaryActive(profile) {
+  return profile?.subscription_tier === 'legendary';
+}
 const normalBorderNames = ['None', 'Thin', 'Thick', 'Dashed', 'Double', 'Rounded'];
 const premiumBorderMaterials = premiumMaterials.filter((m) =>
   ['premium_wood', 'premium_dark_wood', 'premium_glass', 'premium_marble'].includes(m.id),
@@ -628,7 +636,7 @@ function DurationDialog({ open, state, setState, onClose }) {
   );
 }
 
-function EmojiDialog({ open, onClose, onInsert, notify }) {
+function EmojiDialog({ open, onClose, onInsert, notify, profile }) {
   const [tab, setTab] = useState(0);
   const tabs = ['Basic', 'Premium', 'Legendary'];
 
@@ -642,8 +650,8 @@ function EmojiDialog({ open, onClose, onInsert, notify }) {
               size="small"
               variant={tab === i ? 'contained' : 'outlined'}
               onClick={() => {
-                if (i === 2) {
-                  notify('Coming soon');
+                if (i === 2 && !isLegendaryActive(profile)) {
+                  notify(BUY_LEGENDARY_MESSAGE);
                 } else {
                   setTab(i);
                 }
@@ -672,7 +680,7 @@ function EmojiDialog({ open, onClose, onInsert, notify }) {
             {legendaryImageEmojis.map((emoji) => (
               <Box
                 key={emoji.label}
-                onClick={() => notify('Legendary emojis are coming soon.')}
+                onClick={() => notify('Coming soon.')}
                 sx={{
                   cursor: 'pointer',
                   display: 'flex',
@@ -1382,17 +1390,17 @@ export default function Composer({ state, setState, profile, setProfile, notify 
             <Box>
               <Typography sx={{ color: '#B78628', fontWeight: 900, fontSize: 13, mb: 1 }}>Premium</Typography>
               <Box sx={optionGridSx}>
-                <OptionTile icon={<WallpaperRoundedIcon />} label="Background" accent="#B78628" onClick={() => notify('Premium backgrounds are coming soon.')} />
-                <OptionTile icon={<PaletteOutlinedIcon />} label="Color" accent="#B78628" onClick={() => notify('Premium colors are coming soon.')} />
-                <OptionTile icon={<CropSquareRoundedIcon />} label="Border" accent="#B78628" onClick={() => notify('Premium borders are coming soon.')} />
+                <OptionTile icon={<WallpaperRoundedIcon />} label="Background" accent="#B78628" onClick={() => (isPremiumActive(profile) ? setPanel('premiumBg') : notify(BUY_PREMIUM_MESSAGE))} />
+                <OptionTile icon={<PaletteOutlinedIcon />} label="Color" accent="#B78628" onClick={() => (isPremiumActive(profile) ? setPanel('premiumColor') : notify(BUY_PREMIUM_MESSAGE))} />
+                <OptionTile icon={<CropSquareRoundedIcon />} label="Border" accent="#B78628" onClick={() => (isPremiumActive(profile) ? setPanel('premiumBorder') : notify(BUY_PREMIUM_MESSAGE))} />
               </Box>
             </Box>
             <Box>
               <Typography sx={{ color: '#8B6D16', fontWeight: 900, fontSize: 13, mb: 1 }}>Legendary</Typography>
               <Box sx={optionGridSx}>
-                <OptionTile icon={<WallpaperRoundedIcon />} label="Background" accent="#8B6D16" onClick={() => notify('Legendary backgrounds are coming soon.')} />
-                <OptionTile icon={<PaletteOutlinedIcon />} label="Color" accent="#8B6D16" onClick={() => notify('Legendary colors are coming soon.')} />
-                <OptionTile icon={<CropSquareRoundedIcon />} label="Border" accent="#8B6D16" onClick={() => notify('Legendary borders are coming soon.')} />
+                <OptionTile icon={<WallpaperRoundedIcon />} label="Background" accent="#8B6D16" onClick={() => (isLegendaryActive(profile) ? setPanel('legendaryBg') : notify(BUY_LEGENDARY_MESSAGE))} />
+                <OptionTile icon={<PaletteOutlinedIcon />} label="Color" accent="#8B6D16" onClick={() => (isLegendaryActive(profile) ? setPanel('legendaryColor') : notify(BUY_LEGENDARY_MESSAGE))} />
+                <OptionTile icon={<CropSquareRoundedIcon />} label="Border" accent="#8B6D16" onClick={() => (isLegendaryActive(profile) ? setPanel('legendaryBorder') : notify(BUY_LEGENDARY_MESSAGE))} />
               </Box>
             </Box>
           </Stack>
@@ -1439,7 +1447,7 @@ export default function Composer({ state, setState, profile, setProfile, notify 
       <FontDialog open={panel === 'font'} state={state} setState={setState} onClose={() => setPanel(null)} />
       <BorderDialog open={panel === 'border'} state={state} setState={setState} onClose={() => setPanel(null)} />
       <DurationDialog open={panel === 'duration'} state={state} setState={setState} onClose={() => setPanel(null)} />
-      <EmojiDialog open={panel === 'emoji'} onInsert={insertEmoji} onClose={() => setPanel(null)} notify={notify} />
+      <EmojiDialog open={panel === 'emoji'} onInsert={insertEmoji} onClose={() => setPanel(null)} notify={notify} profile={profile} />
 
       <PremiumBackgroundDialog open={panel === 'premiumBg'} state={state} setState={setState} onClose={() => setPanel(null)} />
       <PremiumColorDialog open={panel === 'premiumColor'} state={state} setState={setState} onClose={() => setPanel(null)} />
